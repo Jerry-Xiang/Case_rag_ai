@@ -1,0 +1,101 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+app_start.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Workspace
+workspace/
+workspace/tools/
+workspace/cache/
+
+# Config
+harness/config.yaml
+
+# Cache
+.cache/
+node_modules/
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Kernel connection files
+kernel_connection_file_*.json
+launch_kernel_*.py
+
+# Generated images
+*.png
+*.jpg
+*.jpeg
+
+# PDF files
+*.pdf
+
+# Temporary files
+*.tmp
+*.temp
+
+# Build artifacts
+*.spec
+*.exe
+*.dll
+
+# Lock files
+requirements.txt.lock
+Pipfile.lock
+pyproject.toml.lock
+
+# Package manager
+.pip/
+.pipenv/
+.poetry/
+
+# Virtual environment
+.python-version
+
+# OS
+.LSOverride
+Icon
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Elasticsearch data
+data/
+elasticsearch/
