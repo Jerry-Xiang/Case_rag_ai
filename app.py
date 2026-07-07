@@ -71,7 +71,7 @@ def init_agent_service():
     #                         提示词和回答总是用中文给用户，找不到答案时，回复“我无法回答这个问题”。'''                            
 
     # tools = ['my_image_gen', 'code_interpreter']
-    tools_cfg = ['my_image_gen', 'code_interpreter'
+    tools_cfg = ['my_image_gen', 'code_interpreter', 'retrieval'
     , {
         "mcpServers": {
             # "baidu-search": {
@@ -136,7 +136,11 @@ def run_gui():
             ]
         }
 
-        WebUI(bot, chatbot_config=chatbot_config).run(server_port=webui_cfg['server_port'])
+        WebUI(bot, chatbot_config=chatbot_config).run(
+            # server_name='0.0.0.0',
+            server_port=webui_cfg['server_port'],
+            # prevent_thread_lock=True
+        )
     except Exception as e:
         print(f"启动 Web 界面失败: {str(e)}")
         print("请检查网络连接和 API Key 配置")    
