@@ -119,9 +119,8 @@ class SemanticRouter(Assistant):
 当收到用户指令时，你应该：
 1. 分析指令的语义清晰度
 2. 如果是清晰明确的指令，直接调用相关工具获取数据并回答
-- 查询保险相关信息，优先利用检索工具从本地知识库中查找最相关的信息。
-- 如果需要联网搜索，使用 tavily_search 工具从互联网上搜索，显示搜索结果前 5 条。   
-- 如果需要计算加减乘除（+、-、*、/）或图表数据处理，使用 code_interpreter 工具执行代码。                          
+- 查询保险相关信息，优先利用检索工具retriever从本地知识库中查找最相关的信息。
+- 如果需要联网搜索，使用 tavily_search 工具从互联网上搜索，显示搜索结果前 5 条。                             
 - 如果需要绘制一幅图像，得到图像的url，用 `plt.show()` 展示图像。 
 3. 如果是模糊或复杂的指令，使用ReAct模式进行思考和优化，然后回答
 -先分析用户输入，识别潜在的真实意图
@@ -197,11 +196,28 @@ class SemanticRouter(Assistant):
     def _handle_direct_mode(self, messages: List[Message], user_query: str,
                             extra_generate_cfg: dict, **kwargs) -> Iterator[List[Message]]:
         """Direct模式：清晰明确指令，即时调用工具获取数据，生成自然语言回答
-        
+
         流程：调用LLM判断工具 → 调用工具 → FUNCTION消息 → LLM生成最终回答
         """
         logger.info('Direct模式：开始处理')
-        direct_messages = copy.deepcopy(messages)
+
+        logger.info(f'Direct模式：原始消息: {messages}')
+        # 只保留系统消息和最新的用户查询，清除之前的所有消息
+        direct_messages = []
+        latest_user_msg = None
+        for msg in messages:
+            logger.info(f'当前消息: {msg}')
+            if msg.role == SYSTEM:
+                direct_messages.append(msg)
+            elif msg.role == USER:
+                # 判断是否有值
+                if msg.content and str(msg.content).strip():
+                    latest_user_msg = msg
+                    logger.info(f'Direct模式：保留最新的用户查询: {latest_user_msg}')
+        if latest_user_msg is not None:    # 保留最新的用户查询
+            direct_messages.append(latest_user_msg)    
+
+        logger.info(f'Direct模式：清理后的消息: {direct_messages}')
         
         tool_name, tool_args = self._detect_tool_call(direct_messages, extra_generate_cfg)
         
@@ -224,7 +240,20 @@ class SemanticRouter(Assistant):
         """
         logger.info('Complex模式：开始处理')
         
-        complex_messages = copy.deepcopy(messages)
+        logger.info(f'Complex模式：原始消息: {messages}')
+        # 只保留系统消息和最新的用户查询，清除之前的所有消息
+        complex_messages = []
+        latest_user_msg = None
+        for msg in messages:
+            if msg.role == SYSTEM:
+                complex_messages.append(msg)
+            elif msg.role == USER:
+                # 判断是否有值
+                if msg.content and str(msg.content).strip():
+                    latest_user_msg = msg
+        if latest_user_msg is not None:    # 保留最新的用户查询
+            complex_messages.append(latest_user_msg)    
+        logger.info(f'Complex模式：清理后的消息: {complex_messages}')
         
         tool_call_count = 0
         has_valid_result = False
@@ -352,7 +381,7 @@ class SemanticRouter(Assistant):
                                      **kwargs) -> Iterator[List[Message]]:
         """执行工具调用并生成最终回答（Direct模式专用）
         
-        对于my_image_gen和code_interpreter工具，直接返回结果，不需要LLM解释。
+        对于my_image_gen工具，直接返回结果，不需要LLM解释。
         对于tavily搜索工具，需要调用LLM提炼信息后显示给用户。
         """
         logger.info(f'执行工具调用：{tool_name}')
@@ -627,10 +656,10 @@ class SemanticRouter(Assistant):
     def _requires_llm_post_process(self, tool_name: str) -> bool:
         """判断工具调用后是否需要LLM解释和压缩结果
         
-        my_image_gen、code_interpreter 和 retrieval 工具直接返回结果，不需要LLM解释。
+        my_image_gen工具直接返回结果，不需要LLM解释。 
         tavily搜索工具需要调用LLM提炼信息后显示给用户。
         """
-        tools_without_post_process = ['my_image_gen', 'code_interpreter'] #, 'retrieval'
+        tools_without_post_process = ['my_image_gen'] #, 'retrieval' , 'code_interpreter'
         return tool_name not in tools_without_post_process
 
     def _parse_image_result(self, tool_result: str) -> str:

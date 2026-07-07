@@ -131,6 +131,7 @@ def run_gui():
         chatbot_config = {
             'prompt.suggestions': [            
                 '介绍下雇主责任险',
+                '平安险种有哪些',
                 '画一只在写代码的熊猫',
                 '帮我画一个宇宙飞船' #，然后把它变成黑白的
             ]
