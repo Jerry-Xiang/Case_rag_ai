@@ -138,9 +138,9 @@ def run_gui():
         }
 
         WebUI(bot, chatbot_config=chatbot_config).run(
-            # server_name='0.0.0.0',
+            server_name='0.0.0.0',
             server_port=webui_cfg['server_port'],
-            # prevent_thread_lock=True
+            prevent_thread_lock=True
         )
     except Exception as e:
         print(f"启动 Web 界面失败: {str(e)}")
