@@ -273,8 +273,18 @@ class SemanticRouter(Assistant):
             
             # 让LLM改写语义并选择相似度最高的版本
             complex_messages = self._rewrite_query_and_select_best(complex_messages, user_query)
+            logger.info(f'Complex模式：改写后的消息: {complex_messages}')
+
+            # 只保留系统消息和最新的用户查询，清除之前的所有消息
+            complex_messages1 = []
+            for msg in complex_messages:
+                if msg.role == SYSTEM:
+                    complex_messages1.append(msg)
+                elif msg.role == USER:
+                    complex_messages1.append(msg) 
+            logger.info(f'Complex模式：清理后的消息: {complex_messages1}')            
             
-            tool_name, tool_args = self._detect_tool_call(complex_messages, extra_generate_cfg)
+            tool_name, tool_args = self._detect_tool_call(complex_messages1, extra_generate_cfg)
             
             if not tool_name:
                 logger.info('Complex模式：未检测到工具调用，继续下一轮让LLM改写语义')
@@ -288,7 +298,7 @@ class SemanticRouter(Assistant):
             try:
                 tool_result = self._execute_tool(tool_name, tool_args, user_query,
                                                  complex_messages, extra_generate_cfg, **kwargs)
-                
+                logger.info(f'Complex模式：工具 {tool_name} 返回结果: {tool_result}')
                 fn_msg = Message(role=FUNCTION, name=tool_name, content=tool_result)
                 complex_messages.append(fn_msg)
                 response_messages.append(fn_msg)
@@ -638,18 +648,50 @@ class SemanticRouter(Assistant):
         if len(text_str) < 5:
             return True
             
-        empty_keywords = ['未找到', '无结果', '找不到', '没有相关', '无法回答', 
-                         'not found', 'no result', 'no data', 'empty']
-        text_lower = text_str.lower()
-        for keyword in empty_keywords:
-            if keyword in text_str or keyword.lower() in text_lower:
-                return True
-                
         if text_str == '[]':
             return True
             
+        try:
+            parsed_data = json.loads(text_str)
+            if isinstance(parsed_data, list):
+                if len(parsed_data) == 0:
+                    return True
+                for item in parsed_data:
+                    if isinstance(item, dict):
+                        url = item.get('url', '')
+                        text_content = item.get('text', '')
+                        if isinstance(text_content, list):
+                            text_content = ''.join(text_content)
+                        if url or text_content:
+                            return False
+                    elif isinstance(item, str):
+                        if item.strip():
+                            return False
+                return True
+            elif isinstance(parsed_data, dict):
+                if not parsed_data:
+                    return True
+                for key, value in parsed_data.items():
+                    if isinstance(value, list) and value:
+                        return False
+                    elif isinstance(value, str) and value.strip():
+                        return False
+                    elif value:
+                        return False
+                return True
+        except (json.JSONDecodeError, TypeError):
+            pass
+            
+        text_lower = text_str.lower()
         if 'error' in text_lower and 'occurred' in text_lower:
             return True
+            
+        if len(text_str) < 50:
+            empty_keywords = ['未找到', '无结果', '找不到', '没有相关', '无法回答', 
+                             'not found', 'no result', 'no data', 'empty']
+            for keyword in empty_keywords:
+                if keyword in text_str or keyword.lower() in text_lower:
+                    return True
             
         return False
 
@@ -808,8 +850,8 @@ class SemanticRouter(Assistant):
         logger.info(f'当前消息列表: {messages}')  
         logger.info(f'改写前的消息列表: {copy.deepcopy(messages)}')  
         
-        # 创建临时消息列表用于改写
-        rewrite_messages = messages # copy.deepcopy(messages)
+        # 创建临时消息列表用于改写（必须深拷贝，避免修改原始消息列表）
+        rewrite_messages = copy.deepcopy(messages)
         rewrite_messages.append(Message(role=USER, content=rewrite_prompt))
         logger.info(f'改写后的消息列表: {rewrite_messages}')  
         
