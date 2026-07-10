@@ -277,49 +277,39 @@ class WebUI:
         if self.agent_hub:
             agent_runner = self.agent_hub
         responses = []
-        try:
-            for responses in agent_runner.run(_history, **self.run_kwargs):
-                if not responses:
-                    continue
-                if responses[-1][CONTENT] == PENDING_USER_INPUT:
-                    logger.info('Interrupted. Waiting for user input!')
-                    break
+        for responses in agent_runner.run(_history, **self.run_kwargs):
+            if not responses:
+                continue
+            if responses[-1][CONTENT] == PENDING_USER_INPUT:
+                logger.info('Interrupted. Waiting for user input!')
+                break
 
-                display_responses = convert_fncall_to_text(responses)
-                if not display_responses:
-                    continue
-                if display_responses[-1][CONTENT] is None:
-                    continue
+            display_responses = convert_fncall_to_text(responses)
+            if not display_responses:
+                continue
+            if display_responses[-1][CONTENT] is None:
+                continue
 
-                while len(display_responses) > num_output_bubbles:
-                    # Create a new chat bubble
-                    _chatbot.append([None, None])
-                    _chatbot[-1][1] = [None for _ in range(len(self.agent_list))]
-                    num_output_bubbles += 1
+            while len(display_responses) > num_output_bubbles:
+                # Create a new chat bubble
+                _chatbot.append([None, None])
+                _chatbot[-1][1] = [None for _ in range(len(self.agent_list))]
+                num_output_bubbles += 1
 
-                assert num_output_bubbles == len(display_responses)
-                assert num_input_bubbles + num_output_bubbles == len(_chatbot)
+            assert num_output_bubbles == len(display_responses)
+            assert num_input_bubbles + num_output_bubbles == len(_chatbot)
 
-                for i, rsp in enumerate(display_responses):
-                    agent_index = self._get_agent_index_by_name(rsp[NAME])
-                    _chatbot[num_input_bubbles + i][1][agent_index] = rsp[CONTENT]
+            for i, rsp in enumerate(display_responses):
+                agent_index = self._get_agent_index_by_name(rsp[NAME])
+                _chatbot[num_input_bubbles + i][1][agent_index] = rsp[CONTENT]
 
-                if len(self.agent_list) > 1:
-                    _agent_selector = agent_index
+            if len(self.agent_list) > 1:
+                _agent_selector = agent_index
 
-                if _agent_selector is not None:
-                    yield _chatbot, _history, _agent_selector
-                else:
-                    yield _chatbot, _history
-        except Exception as e:
-            logger.error(f'agent_run 执行异常: {str(e)}', exc_info=True)
-            error_msg = f'抱歉，处理您的请求时发生错误：{str(e)}'
-            _chatbot[-1][1][0] = error_msg
             if _agent_selector is not None:
                 yield _chatbot, _history, _agent_selector
             else:
                 yield _chatbot, _history
-            return
 
         if responses:
             _history.extend([res for res in responses if res[CONTENT] != PENDING_USER_INPUT])
